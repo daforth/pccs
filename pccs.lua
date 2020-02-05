@@ -22,12 +22,21 @@ local function newpobj(callf)
 end
 
 local pccs = {}
+local function loadsafe(str)
+  local t = table.pack(load('return ' .. str, nil, 't', pccs)())
+  for i=1,t.n do
+    if t[i] == nil or type(t[i]) == 'table' then
+      error("Error evaluating expression: <" .. str .. ">")
+    end
+  end
+  return table.unpack(t)
+end
 setmetatable(pccs, {__index = function(self, key)
                       return newpobj(
                         function(_, str)
                           if type(str) == "string" then
                             return newpobj(function()
-                                return table.concat({key, load('return ' .. str, nil, 't', pccs)()}, '_')
+                                return table.concat({key, loadsafe(str)}, '_')
                             end)
                           else
                             return key
@@ -71,7 +80,8 @@ end
 
 local function evalrange(range)
   local name, ab = string.match(range, "(.*):(.*)")
-  return {name, assert(load('return ' .. ab, nil, 't', pccs))()}
+  --return {name,   assert(load('return ' .. ab, nil, 't', pccs))()}
+  return {name, loadsafe(ab)}
 end
 
 local function evalranges(ranges)
@@ -137,7 +147,7 @@ end
 
 function pccs.set(t)
   if type(t) ~= 'table' then error("Set requires a table argument in first position") end
-  return function()
+  return newpobj(function()
     local actions={}
     for _, el in ipairs(t) do
       if type(el) == "table" and el.__type ~= "pname" then
@@ -152,7 +162,7 @@ function pccs.set(t)
       end
     end
     return '{' .. table.concat(actions, ', ') .. '}'
-  end
+  end)
 end
 
 function pccs.sum(rf)
