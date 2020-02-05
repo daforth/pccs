@@ -40,8 +40,8 @@ local pccs = {}
 local function loadsafe(str)
   local t = table.pack(load('return ' .. str, nil, 't', pccs)())
   for i=1,t.n do
-    if t[i] == nil or type(t[i]) == 'table' then
-      error("Error evaluating expression: <" .. str .. ">")
+    if type(t[i]) == 'table' then
+      t[i] = t[i]()
     end
   end
   return table.unpack(t)
@@ -208,7 +208,7 @@ function pccs.par(rf)
   return rangesacc(rf, operator('|'))
 end
 
-local f = io.open 'test.lua'
+local f = assert(io.open(arg[1]))
 load(f:read("a"), nil, "t", pccs)()
 f:close()
 
