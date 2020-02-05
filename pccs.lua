@@ -1,5 +1,10 @@
 local function newpobj(callf)
   local mt = {
+    __div=function(a,b)
+      return newpobj(function()
+          return  a() .. ' / ' .. b()
+      end)
+    end,
     __bor=function(a,b)
       return newpobj(function()
           return '(' .. a() .. ' | ' .. b() .. ')'
@@ -145,9 +150,8 @@ local function getranges(el)
   return ranges
 end
 
-function pccs.set(t)
-  if type(t) ~= 'table' then error("Set requires a table argument in first position") end
-  return newpobj(function()
+-- make a list for set and rel
+local function makelist(t)
     local actions={}
     for _, el in ipairs(t) do
       if type(el) == "table" and el.__type ~= "pname" then
@@ -161,7 +165,24 @@ function pccs.set(t)
         table.insert(actions, el())
       end
     end
-    return '{' .. table.concat(actions, ', ') .. '}'
+    return table.concat(actions, ', ')
+
+end
+
+function pccs.set(t)
+  if type(t) ~= 'table' then error("Set requires a table argument in first position") end
+  return newpobj(function()
+      return '{'..makelist(t)..'}'
+  end)
+end
+
+function pccs.rel(t)
+  if type(t) ~= 'table' then error("Rel requires a table argument in first position") end
+  if #t < 2 then error("Rel requires as input a table containing at least two elements") end
+  local name = table.remove(t,1)
+  if name.__type ~= "pname" then error("First argument must be a name") end
+  return newpobj(function()
+      return '('..name()..'['..makelist(t)..'])'
   end)
 end
 
@@ -177,7 +198,6 @@ function pccs.par(rf)
   return rangesacc(rf, operator('|'))
 end
 
-pccs.print = print
 local f = io.open 'test.lua'
 load(f:read("a"), nil, "t", pccs)()
 f:close()

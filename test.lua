@@ -4,4 +4,5 @@ proc 'j:2,4' {GN 'j', act 'j'}
 
 -- rel new/old
 
-proc {Name, set { {'j:2,3', act 'j'}, {'i:3,5', ict 'i'}, act2 } .. AC}
+proc {Name, rel { A, {'j:2,3', act 'j' / bact 'j'}, {'i:3,5', ict 'i'}, act2 } }
+
