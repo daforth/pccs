@@ -99,7 +99,20 @@ end
 pccs.__result = {}
 
 function pccs.proc(rf)
-
+  local function _proc(ranges, body)
+    if body == nil then error ("A proc definition needs at least one table argument") end
+    if #body ~= 2 then error ("A proc definition needs at least two arguments in table") end
+    local function addproc()
+      table.insert(pccs.__result, 'proc '..body[1]()..' = '..body[2]())
+    end
+    if ranges then
+      evalranges(ranges)
+      rangeswalker(addproc ,table.unpack(ranges))
+    else
+      addproc()
+    end
+  end
+  return rangesacc(rf, _proc)
 end
 
 function pccs.sum(rf)
@@ -118,3 +131,5 @@ pccs.print = print
 local f = io.open 'test.lua'
 load(f:read("a"), nil, "t", pccs)()
 f:close()
+
+print(table.concat(pccs.__result, '\n'))
