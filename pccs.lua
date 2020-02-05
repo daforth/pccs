@@ -1,3 +1,4 @@
+local pccs
 local function newpobj(callf)
   local mt = {
     __bnot=function(a)
@@ -36,7 +37,6 @@ local function newpobj(callf)
   return setmetatable(t, mt)
 end
 
-local pccs = {}
 local function loadsafe(str)
   local t = table.pack(load('return ' .. str, nil, 't', pccs)())
   for i=1,t.n do
@@ -46,18 +46,6 @@ local function loadsafe(str)
   end
   return table.unpack(t)
 end
-setmetatable(pccs, {__index = function(self, key)
-                      return newpobj(
-                        function(_, str)
-                          if type(str) == "string" then
-                            return newpobj(function()
-                                return table.concat({key, loadsafe(str)}, '_')
-                            end)
-                          else
-                            return key
-                          end
-                      end)
-end})
 
 -- call f with env set by looping over ranges ... (range: {'j', 1, 3})
 local function rangeswalker(f, ...)
@@ -121,7 +109,6 @@ local function operator(sym)
   end
 end
 
-pccs.__result = {}
 
 local function definition (rf, class)
   local function _def(ranges, body)
@@ -140,11 +127,11 @@ local function definition (rf, class)
   return rangesacc(rf, _def)
 end
 
-function pccs.proc(rf)
+local function proc(rf)
   return definition(rf, 'proc')
 end
 
-function pccs.dset(rf)
+local function dset(rf)
   return definition(rf, 'set')
 end
 
@@ -162,31 +149,31 @@ end
 
 -- make a list for set and rel
 local function makelist(t)
-    local actions={}
-    for _, el in ipairs(t) do
-      if type(el) == "table" and el.__type ~= "pname" then
-        local ranges = getranges(el)
-        local function addaction()
-          table.insert(actions, el[#el]())
-        end
-        evalranges(ranges)
-        rangeswalker(addaction ,table.unpack(ranges))
-      else
-        table.insert(actions, el())
+  local actions={}
+  for _, el in ipairs(t) do
+    if type(el) == "table" and el.__type ~= "pname" then
+      local ranges = getranges(el)
+      local function addaction()
+        table.insert(actions, el[#el]())
       end
+      evalranges(ranges)
+      rangeswalker(addaction ,table.unpack(ranges))
+    else
+      table.insert(actions, el())
     end
-    return table.concat(actions, ', ')
+  end
+  return table.concat(actions, ', ')
 
 end
 
-function pccs.set(t)
+local function set(t)
   if type(t) ~= 'table' then error("Set requires a table argument in first position") end
   return newpobj(function()
       return '{'..makelist(t)..'}'
   end)
 end
 
-function pccs.rel(t)
+local function rel(t)
   if type(t) ~= 'table' then error("Rel requires a table argument in first position") end
   if #t < 2 then error("Rel requires as input a table containing at least two elements") end
   local name = table.remove(t,1)
@@ -196,20 +183,46 @@ function pccs.rel(t)
   end)
 end
 
-function pccs.sum(rf)
+local function sum(rf)
   return rangesacc(rf, operator('+'))
 end
 
-function pccs.pre(rf)
+local function pre(rf)
   return rangesacc(rf, operator('.'))
 end
 
-function pccs.par(rf)
+local function par(rf)
   return rangesacc(rf, operator('|'))
 end
 
-local f = assert(io.open(arg[1]))
-load(f:read("a"), nil, "t", pccs)()
-f:close()
+local function refreshenv()
+  pccs = {}
+  pccs.__result = {}
+  pccs.proc = proc
+  pccs.dset = dset
+  pccs.set = set
+  pccs.rel = rel
+  pccs.sum = sum
+  pccs.pre = pre
+  pccs.par = par
+  setmetatable(pccs, {__index = function(self, key)
+                        return newpobj(
+                          function(_, str)
+                            if type(str) == "string" then
+                              return newpobj(function()
+                                  return table.concat({key, loadsafe(str)}, '_')
+                              end)
+                            else
+                              return key
+                            end
+                        end)
+  end})
+end
 
-print(table.concat(pccs.__result, '\n'))
+local function compile(str)
+  refreshenv()
+  load(str, nil, "t", pccs)()
+  return table.concat(pccs.__result, '\n')
+end
+
+return compile
