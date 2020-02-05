@@ -126,7 +126,7 @@ pccs.__result = {}
 local function definition (rf, class)
   local function _def(ranges, body)
     if body == nil then error ("A "..class.." definition needs at least one table argument") end
-    if #body ~= 2 then error ("A "..class.." definition needs at least two arguments in table") end
+    if #body ~= 2 then error ("A "..class.." definition requires two arguments in following table") end
     local function adddef()
       table.insert(pccs.__result, class..' '..body[1]()..' = '..body[2]())
     end
