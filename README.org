@@ -1,2 +1,2 @@
-# pccs
+* pccs
 lua pccs
