@@ -1,5 +1,15 @@
 local function newpobj(callf)
   local mt = {
+    __bnot=function(a)
+      return newpobj(function()
+          return  "'" .. a()
+      end)
+    end,
+    __sub=function(a,b)
+      return newpobj(function()
+          return  '('.. a() .. ' \\ ' .. b() .. ')'
+      end)
+    end,
     __div=function(a,b)
       return newpobj(function()
           return  a() .. ' / ' .. b()
@@ -120,7 +130,7 @@ local function definition (rf, class)
     local function adddef()
       table.insert(pccs.__result, class..' '..body[1]()..' = '..body[2]())
     end
-    if ranges then
+    if ranges and #ranges ~= 0 then
       evalranges(ranges)
       rangeswalker(adddef ,table.unpack(ranges))
     else
