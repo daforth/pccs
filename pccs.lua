@@ -17,7 +17,7 @@ local function newpobj(callf)
     end,
     __call=callf
   }
-  local t = {}
+  local t = {__type='pname'}
   return setmetatable(t, mt)
 end
 
@@ -98,21 +98,61 @@ end
 
 pccs.__result = {}
 
-function pccs.proc(rf)
-  local function _proc(ranges, body)
-    if body == nil then error ("A proc definition needs at least one table argument") end
-    if #body ~= 2 then error ("A proc definition needs at least two arguments in table") end
-    local function addproc()
-      table.insert(pccs.__result, 'proc '..body[1]()..' = '..body[2]())
+local function definition (rf, class)
+  local function _def(ranges, body)
+    if body == nil then error ("A "..class.." definition needs at least one table argument") end
+    if #body ~= 2 then error ("A "..class.." definition needs at least two arguments in table") end
+    local function adddef()
+      table.insert(pccs.__result, class..' '..body[1]()..' = '..body[2]())
     end
     if ranges then
       evalranges(ranges)
-      rangeswalker(addproc ,table.unpack(ranges))
+      rangeswalker(adddef ,table.unpack(ranges))
     else
-      addproc()
+      adddef()
     end
   end
-  return rangesacc(rf, _proc)
+  return rangesacc(rf, _def)
+end
+
+function pccs.proc(rf)
+  return definition(rf, 'proc')
+end
+
+function pccs.dset(rf)
+  return definition(rf, 'set')
+end
+
+-- return an array with the ranges
+local function getranges(el)
+  local j = 1
+  local ranges={}
+  while type(el[j]) == "string" do
+    table.insert(ranges, el[j])
+    j = j + 1
+  end
+  if j ~= #el or j == 1 then error("The first arguments should be string ranges") end
+  return ranges
+end
+
+function pccs.set(t)
+  if type(t) ~= 'table' then error("Set requires a table argument in first position") end
+  return function()
+    local actions={}
+    for _, el in ipairs(t) do
+      if type(el) == "table" and el.__type ~= "pname" then
+        local ranges = getranges(el)
+        local function addaction()
+          table.insert(actions, el[#el]())
+        end
+        evalranges(ranges)
+        rangeswalker(addaction ,table.unpack(ranges))
+      else
+        table.insert(actions, el())
+      end
+    end
+    return '{' .. table.concat(actions, ', ') .. '}'
+  end
 end
 
 function pccs.sum(rf)
