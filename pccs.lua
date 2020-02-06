@@ -227,6 +227,9 @@ local function substitutions(str)
   str = string.gsub(str, "%[", " rel{")
   str = string.gsub(str, "%]", "}")
 
+  str = string.gsub(str, "%<", "'")
+  str = string.gsub(str, "%>", "'")
+
   str = string.gsub(str, "%:%:%s*%{", " set{")
   str = string.gsub(str, "%.", "..")
   str = string.gsub(str, "\\", "-")
@@ -241,5 +244,4 @@ end
 
 local f = assert(io.open(arg[1]))
 print(compile(f:read("a")))
--- print(substitutions(f:read'a'))
 f:close()
